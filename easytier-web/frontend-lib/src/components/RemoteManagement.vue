@@ -300,19 +300,29 @@ const editNetwork = async () => {
         return;
     }
 
-    if (!currentNetworkControl.viewable.value) {
+    if (!currentNetworkControl.viewable.value || currentNetworkMeta.value?.source === Api.ConfigSource.Web) {
         toast.add({ severity: 'warn', summary: t('web.common.warning') || 'Notice', detail: '订阅服务器配置已受保护，隐藏内部连接参数', life: 3000 });
+        isEditingNetwork.value = false;
+        currentNetworkConfig.value = undefined;
         return;
     }
 
     try {
         let ret = await props.api.get_network_config(instanceId.value!);
+        if (ret.config_server_url) {
+            toast.add({ severity: 'warn', summary: t('web.common.warning') || 'Notice', detail: '订阅服务器配置已受保护，隐藏内部连接参数', life: 3000 });
+            isEditingNetwork.value = false;
+            currentNetworkConfig.value = undefined;
+            return;
+        }
         console.debug("editNetwork", ret);
         currentNetworkConfig.value = ret;
-        isEditingNetwork.value = true; // Switch to editing mode instead
+        isEditingNetwork.value = true;
     } catch (e: any) {
         console.error(e);
         toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to edit network, error: ' + JSON.stringify(e.response?.data ?? e), life: 2000 });
+        isEditingNetwork.value = false;
+        currentNetworkConfig.value = undefined;
         return;
     }
 }
@@ -594,7 +604,7 @@ onUnmounted(() => {
         <!-- Main Content Area -->
         <div class="network-content bg-surface-0 p-4 rounded-lg shadow-sm">
             <!-- Subscription Protected Config Notice -->
-            <div v-if="selectedInstanceId && !currentNetworkControl.viewable.value" class="subscription-protected-container p-6 text-center border rounded-lg bg-surface-50 dark:bg-surface-800">
+            <div v-if="selectedInstanceId && (!currentNetworkControl.viewable.value || currentNetworkConfig?.config_server_url)" class="subscription-protected-container p-6 text-center border rounded-lg bg-surface-50 dark:bg-surface-800">
                 <i class="pi pi-lock text-5xl text-primary mb-3"></i>
                 <h3 class="text-xl font-bold mb-2">订阅服务器配置（已受保护）</h3>
                 <p class="text-secondary text-base mb-6 max-w-lg mx-auto">
@@ -607,7 +617,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Network Creation Form -->
-            <div v-else-if="isEditingNetwork || networkIsDisabled" class="network-creation-container">
+            <div v-else-if="(isEditingNetwork || networkIsDisabled) && currentNetworkControl.viewable.value && !currentNetworkConfig?.config_server_url" class="network-creation-container">
                 <div class="network-creation-header flex items-center gap-2 mb-3">
                     <i class="pi pi-plus-circle text-primary text-xl"></i>
                     <h2 class="text-xl font-medium">{{ t('web.device_management.edit_network') }}</h2>

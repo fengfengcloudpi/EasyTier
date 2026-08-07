@@ -277,7 +277,7 @@ async fn get_config(app: AppHandle, instance_id: String) -> Result<NetworkConfig
         .handle_get_network_config_with_source(app, instance_id)
         .await
         .map_err(|e| e.to_string())?;
-    if source == ConfigSource::Web {
+    if source == ConfigSource::Web || cfg.config_server_url.is_some() {
         return Err("configuration internal details are protected by subscription server".to_string());
     }
     Ok(cfg)
@@ -651,7 +651,7 @@ mod manager {
                 .pre_run_network_instance_hook(
                     &self.app,
                     cfg,
-                    PersistedConfigSource::from_runtime_source(cfg.get_network_config_source()),
+                    PersistedConfigSource::Web,
                 )
                 .await
         }
