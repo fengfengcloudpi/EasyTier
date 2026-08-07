@@ -26,10 +26,16 @@ export interface CollectNetworkInfoResponse {
     }
 }
 
+export enum ConfigSource {
+    User = 0,
+    Web = 1,
+}
+
 export namespace ConfigFilePermission {
     export type Flags = number;
     export const READ_ONLY: Flags = 1 << 0;
     export const NO_DELETE: Flags = 1 << 1;
+    export const NO_VIEW: Flags = 1 << 2;
     export function hasPermission(perm: Flags, flag: Flags): boolean {
         return (perm & flag) === flag;
     }
@@ -42,11 +48,15 @@ export namespace ConfigFilePermission {
     export function isDeletable(perm: Flags): boolean {
         return !hasPermission(perm, NO_DELETE);
     }
+    export function isViewable(perm: Flags): boolean {
+        return !hasPermission(perm, NO_VIEW);
+    }
 }
 
 export interface NetworkMeta {
     network_name: string;
     config_permission: ConfigFilePermission.Flags;
+    source?: ConfigSource;
 }
 
 export interface GetNetworkMetasResponse {

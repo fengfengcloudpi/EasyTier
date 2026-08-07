@@ -87,6 +87,7 @@ pub struct ConfigFilePermission(u8);
 impl ConfigFilePermission {
     pub const READ_ONLY: u8 = 1 << 0;
     pub const NO_DELETE: u8 = 1 << 1;
+    pub const NO_VIEW: u8 = 1 << 2;
 
     pub fn with_flag(self, flag: u8) -> Self {
         Self(self.0 | flag)
@@ -137,7 +138,12 @@ impl fmt::Debug for ConfigFilePermission {
         } else {
             "DELETABLE"
         };
-        write!(formatter, "{access}|{deletion}")
+        let viewing = if self.has_flag(Self::NO_VIEW) {
+            "|NO_VIEW"
+        } else {
+            ""
+        };
+        write!(formatter, "{access}|{deletion}{viewing}")
     }
 }
 

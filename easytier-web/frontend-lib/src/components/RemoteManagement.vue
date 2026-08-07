@@ -68,10 +68,15 @@ const currentNetworkControl = {
         return Api.ConfigFilePermission.isRemoveSaveable(currentNetworkMeta.value?.config_permission ?? 0);
     }),
     editable: computed(() => {
-        return Api.ConfigFilePermission.isEditable(currentNetworkMeta.value?.config_permission ?? 0);
+        const isWeb = currentNetworkMeta.value?.source === Api.ConfigSource.Web;
+        return Api.ConfigFilePermission.isEditable(currentNetworkMeta.value?.config_permission ?? 0) && !isWeb;
     }),
     deletable: computed(() => {
         return Api.ConfigFilePermission.isDeletable(currentNetworkMeta.value?.config_permission ?? 0);
+    }),
+    viewable: computed(() => {
+        const isWeb = currentNetworkMeta.value?.source === Api.ConfigSource.Web;
+        return Api.ConfigFilePermission.isViewable(currentNetworkMeta.value?.config_permission ?? 0) && !isWeb;
     })
 }
 
@@ -164,8 +169,16 @@ const loadCurrentNetworkConfig = async () => {
         return;
     }
 
-    let ret = await props.api.get_network_config(selectedInstanceId.value!.uuid);
-    currentNetworkConfig.value = ret;
+    if (!currentNetworkControl.viewable.value) {
+        return;
+    }
+
+    try {
+        let ret = await props.api.get_network_config(selectedInstanceId.value!.uuid);
+        currentNetworkConfig.value = ret;
+    } catch (e) {
+        console.debug("get_network_config protected or failed:", e);
+    }
 }
 
 const stopNetwork = async () => {
@@ -175,6 +188,16 @@ const stopNetwork = async () => {
 
     await props.api.update_network_instance_state(selectedInstanceId.value.uuid, true);
     await loadNetworkInstanceIds();
+}
+
+const startNetwork = async () => {
+    if (!selectedInstanceId.value) {
+        return;
+    }
+
+    await props.api.update_network_instance_state(selectedInstanceId.value.uuid, false);
+    await loadNetworkInstanceIds();
+    await loadCurrentNetworkInfo();
 }
 
 const confirm = useConfirm();
@@ -270,6 +293,11 @@ const editNetwork = async () => {
         return;
     }
 
+    if (!currentNetworkControl.viewable.value) {
+        toast.add({ severity: 'warn', summary: t('web.common.warning') || 'Notice', detail: '订阅服务器配置已受保护，隐藏内部连接参数', life: 3000 });
+        return;
+    }
+
     try {
         let ret = await props.api.get_network_config(instanceId.value!);
         console.debug("editNetwork", ret);
@@ -277,7 +305,7 @@ const editNetwork = async () => {
         isEditingNetwork.value = true; // Switch to editing mode instead
     } catch (e: any) {
         console.error(e);
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to edit network, error: ' + JSON.stringify(e.response.data), life: 2000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to edit network, error: ' + JSON.stringify(e.response?.data ?? e), life: 2000 });
         return;
     }
 }
@@ -420,12 +448,13 @@ const actionMenu: Ref<MenuItem[]> = ref([
     {
         label: () => t('web.device_management.edit_network'),
         icon: 'pi pi-pencil',
-        visible: () => !(networkIsDisabled.value ?? true) && currentNetworkControl.editable.value,
+        visible: () => !(networkIsDisabled.value ?? true) && currentNetworkControl.editable.value && currentNetworkControl.viewable.value,
         command: () => editNetwork()
     },
     {
         label: () => t('web.device_management.export_config'),
         icon: 'pi pi-download',
+        visible: () => currentNetworkControl.viewable.value,
         command: () => exportConfig()
     },
     {
@@ -557,8 +586,21 @@ onUnmounted(() => {
 
         <!-- Main Content Area -->
         <div class="network-content bg-surface-0 p-4 rounded-lg shadow-sm">
+            <!-- Subscription Protected Config Notice -->
+            <div v-if="selectedInstanceId && !currentNetworkControl.viewable.value" class="subscription-protected-container p-6 text-center border rounded-lg bg-surface-50 dark:bg-surface-800">
+                <i class="pi pi-lock text-5xl text-primary mb-3"></i>
+                <h3 class="text-xl font-bold mb-2">订阅服务器配置（已受保护）</h3>
+                <p class="text-secondary text-base mb-6 max-w-lg mx-auto">
+                    此节点的组网配置由订阅服务器统一管理，隐去了内部敏感连接参数。本地无法查看或修改配置细节。
+                </p>
+                <div class="flex justify-center gap-3">
+                    <Button v-if="networkIsDisabled" @click="startNetwork" icon="pi pi-play" label="启用网络" severity="success" />
+                    <Button v-else @click="stopNetwork" icon="pi pi-power-off" label="禁用网络" severity="danger" />
+                </div>
+            </div>
+
             <!-- Network Creation Form -->
-            <div v-if="isEditingNetwork || networkIsDisabled" class="network-creation-container">
+            <div v-else-if="isEditingNetwork || networkIsDisabled" class="network-creation-container">
                 <div class="network-creation-header flex items-center gap-2 mb-3">
                     <i class="pi pi-plus-circle text-primary text-xl"></i>
                     <h2 class="text-xl font-medium">{{ t('web.device_management.edit_network') }}</h2>

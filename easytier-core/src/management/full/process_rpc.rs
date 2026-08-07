@@ -697,9 +697,17 @@ where
             .instances
             .config_control(instance_id)
             .ok_or_else(|| anyhow::anyhow!("instance config control not found"))?;
-        if control.is_read_only() {
+        let source = self
+            .management
+            .instances
+            .config_source(instance_id)
+            .unwrap_or(ConfigSource::User);
+        if control.is_read_only()
+            || control.permission.has_flag(ConfigFilePermission::NO_VIEW)
+            || source == ConfigSource::Web
+        {
             return Err(
-                anyhow::anyhow!("configuration for instance {instance_id} is read-only").into(),
+                anyhow::anyhow!("configuration internal details for instance {instance_id} are protected by subscription server").into(),
             );
         }
         Ok(GetNetworkInstanceConfigResponse {
@@ -708,12 +716,7 @@ where
                 .instances
                 .config(instance_id)
                 .map(|config| network_config_from_toml(&config)),
-            source: config_source_to_rpc(
-                self.management
-                    .instances
-                    .config_source(instance_id)
-                    .unwrap_or(ConfigSource::User),
-            ),
+            source: config_source_to_rpc(source),
         })
     }
 
@@ -733,12 +736,20 @@ where
             let Some(control) = self.management.instances.config_control(instance_id) else {
                 continue;
             };
+            let source = config.get_network_config_source();
+            let mut permission = control.permission;
+            if source == ConfigSource::Web {
+                permission = permission
+                    .with_flag(ConfigFilePermission::READ_ONLY)
+                    .with_flag(ConfigFilePermission::NO_DELETE)
+                    .with_flag(ConfigFilePermission::NO_VIEW);
+            }
             metas.push(NetworkMeta {
                 inst_id: Some(instance_id.into()),
                 network_name: config.get_network_identity().network_name,
-                config_permission: control.permission.into(),
+                config_permission: permission.into(),
                 instance_name: instance.instance_name().to_owned(),
-                source: config_source_to_rpc(config.get_network_config_source()),
+                source: config_source_to_rpc(source),
             });
         }
         Ok(ListNetworkInstanceMetaResponse { metas })
