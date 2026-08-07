@@ -273,10 +273,13 @@ async fn get_config(app: AppHandle, instance_id: String) -> Result<NetworkConfig
     let instance_id = instance_id
         .parse()
         .map_err(|e: uuid::Error| e.to_string())?;
-    let cfg = get_client_manager!()?
-        .handle_get_network_config(app, instance_id)
+    let (cfg, source) = get_client_manager!()?
+        .handle_get_network_config_with_source(app, instance_id)
         .await
         .map_err(|e| e.to_string())?;
+    if source == ConfigSource::Web {
+        return Err("configuration internal details are protected by subscription server".to_string());
+    }
     Ok(cfg)
 }
 

@@ -519,7 +519,7 @@ onUnmounted(() => {
                                         <span class="truncate block">
                                             &nbsp;
                                             <span v-if="slotProps.value.meta">
-                                                {{ slotProps.value.meta.network_name }} ({{ slotProps.value.uuid }})
+                                                {{ (slotProps.value.meta.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.value.meta.config_permission ?? 0)) ? '🔒 订阅网络 (已受保护)' : slotProps.value.meta.network_name }} ({{ (slotProps.value.meta.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.value.meta.config_permission ?? 0)) ? '****' + slotProps.value.uuid.slice(-6) : slotProps.value.uuid }})
                                             </span>
                                             <span v-else>
                                                 {{ slotProps.value.uuid }}
@@ -539,14 +539,14 @@ onUnmounted(() => {
                                     <div class="flex items-center min-w-0">
                                         <div class="mr-4 min-w-0 flex-1">
                                             <span class="truncate block">{{ t('network_name') }}: {{
-                                                slotProps.option.meta?.network_name ?? slotProps.option.uuid }}</span>
+                                                (slotProps.option.meta?.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.option.meta?.config_permission ?? 0)) ? '🔒 订阅网络 (已受保护)' : (slotProps.option.meta?.network_name ?? slotProps.option.uuid) }}</span>
                                         </div>
                                         <Tag class="my-auto leading-3 shrink-0"
                                             :severity="isRunning(slotProps.option.uuid) ? 'success' : 'info'"
                                             :value="t(isRunning(slotProps.option.uuid) ? 'network_running' : 'network_stopped')" />
                                     </div>
                                     <div class="max-w-full overflow-hidden text-ellipsis text-gray-500">
-                                        {{ slotProps.option.uuid }}
+                                        {{ (slotProps.option.meta?.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.option.meta?.config_permission ?? 0)) ? '****' + slotProps.option.uuid.slice(-6) : slotProps.option.uuid }}
                                     </div>
                                 </div>
                             </template>

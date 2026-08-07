@@ -263,16 +263,34 @@ where
             if metas.contains_key(&instance_id) {
                 continue;
             }
-            let (config, source) = self
+            let Ok((config, source)) = self
                 .handle_get_network_config_with_source(identify.clone(), instance_id)
-                .await?;
-            let network_name = config.network_name.unwrap_or_default();
+                .await
+            else {
+                continue;
+            };
+
+            let is_protected = source == ConfigSource::Web;
+            let mut permission = ConfigFilePermission::default();
+            if is_protected {
+                permission = permission
+                    .with_flag(ConfigFilePermission::READ_ONLY)
+                    .with_flag(ConfigFilePermission::NO_DELETE)
+                    .with_flag(ConfigFilePermission::NO_VIEW);
+            }
+
+            let network_name = if is_protected {
+                "订阅网络".to_string()
+            } else {
+                config.network_name.unwrap_or_default()
+            };
+
             metas.insert(
                 instance_id,
                 NetworkMeta {
                     inst_id: Some(instance_id.into()),
                     network_name: network_name.clone(),
-                    config_permission: 0,
+                    config_permission: permission.into(),
                     instance_name: network_name,
                     source: config_source_to_rpc(source),
                 },

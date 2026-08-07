@@ -744,11 +744,22 @@ where
                     .with_flag(ConfigFilePermission::NO_DELETE)
                     .with_flag(ConfigFilePermission::NO_VIEW);
             }
+            let is_protected = permission.has_flag(ConfigFilePermission::NO_VIEW) || source == ConfigSource::Web;
+            let network_name = if is_protected {
+                "订阅网络".to_string()
+            } else {
+                config.get_network_identity().network_name
+            };
+            let instance_name = if is_protected {
+                "订阅组网节点".to_string()
+            } else {
+                instance.instance_name().to_owned()
+            };
             metas.push(NetworkMeta {
                 inst_id: Some(instance_id.into()),
-                network_name: config.get_network_identity().network_name,
+                network_name,
                 config_permission: permission.into(),
-                instance_name: instance.instance_name().to_owned(),
+                instance_name,
                 source: config_source_to_rpc(source),
             });
         }
