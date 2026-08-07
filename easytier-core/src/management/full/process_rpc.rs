@@ -702,12 +702,9 @@ where
             .instances
             .config_source(instance_id)
             .unwrap_or(ConfigSource::User);
-        let toml_config = self.management.instances.config(instance_id);
-        let config_server_url = toml_config.as_ref().and_then(|c| c.get_config_server_url());
         if control.is_read_only()
             || control.permission.has_flag(ConfigFilePermission::NO_VIEW)
             || source == ConfigSource::Web
-            || config_server_url.is_some()
         {
             return Err(
                 anyhow::anyhow!("configuration internal details for instance {instance_id} are protected by subscription server").into(),
