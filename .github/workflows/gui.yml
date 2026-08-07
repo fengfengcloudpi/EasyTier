@@ -1,10 +1,11 @@
 name: EasyTier GUI
 
 on:
+  workflow_dispatch:
   push:
-    branches: ["develop", "main", "releases/**"]
+    branches: ["develop", "main", "borUI", "releases/**"]
   pull_request:
-    branches: ["develop", "main"]
+    branches: ["develop", "main", "borUI"]
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
