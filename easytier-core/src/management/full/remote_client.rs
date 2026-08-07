@@ -382,9 +382,9 @@ where
 
         let source = db_row.get_runtime_network_config_source();
         if source == ConfigSource::Web {
-            return Err(RemoteClientError::PersistentError(anyhow::anyhow!(
-                "configuration internal details are protected by subscription server"
-            )));
+            return Err(RemoteClientError::Other(
+                "configuration internal details are protected by subscription server".to_string(),
+            ));
         }
 
         Ok((
