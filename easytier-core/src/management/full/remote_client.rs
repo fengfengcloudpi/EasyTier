@@ -380,11 +380,18 @@ where
                 inst_id
             )))?;
 
+        let source = db_row.get_runtime_network_config_source();
+        if source == ConfigSource::Web {
+            return Err(RemoteClientError::PersistentError(anyhow::anyhow!(
+                "configuration internal details are protected by subscription server"
+            )));
+        }
+
         Ok((
             db_row
                 .get_network_config()
                 .map_err(RemoteClientError::PersistentError)?,
-            db_row.get_runtime_network_config_source(),
+            source,
         ))
     }
 }

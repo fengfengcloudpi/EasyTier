@@ -80,6 +80,13 @@ const currentNetworkControl = {
     })
 }
 
+watch(currentNetworkControl.viewable, (viewable) => {
+    if (!viewable) {
+        currentNetworkConfig.value = undefined;
+        isEditingNetwork.value = false;
+    }
+}, { immediate: true });
+
 const instanceList = ref<Array<{ uuid: string; meta?: Api.NetworkMeta }>>([]);
 const updateInstanceList = () => {
     let insts = new Set<string>();
