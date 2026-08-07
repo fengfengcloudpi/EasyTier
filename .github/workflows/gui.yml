@@ -162,7 +162,7 @@ jobs:
           args: --verbose --target ${{ matrix.GUI_TARGET }}
 
       - name: Notarize and staple macOS DMG
-        if: ${{ contains(matrix.GUI_TARGET, 'darwin') && secrets.APPLE_ID != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        if: ${{ contains(matrix.GUI_TARGET, 'darwin') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         timeout-minutes: 45
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -170,6 +170,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
+
+          if [[ -z "${APPLE_ID:-}" ]]; then
+            echo "APPLE_ID secret is not set, skipping macOS notarization."
+            exit 0
+          fi
 
           dmg_dir="./target/$GUI_TARGET/release/bundle/dmg"
           if [[ ! -d "$dmg_dir" ]]; then
