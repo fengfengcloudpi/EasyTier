@@ -12,6 +12,7 @@ use easytier_proto::{
 };
 
 use crate::config::toml::ConfigSource;
+use crate::management::ConfigFilePermission;
 
 use super::{config_source_from_rpc, config_source_to_rpc};
 
