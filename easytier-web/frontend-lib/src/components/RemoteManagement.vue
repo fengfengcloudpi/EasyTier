@@ -87,6 +87,25 @@ watch(currentNetworkControl.viewable, (viewable) => {
     }
 }, { immediate: true });
 
+const isProtectedMeta = (meta?: Api.NetworkMeta): boolean => {
+    if (!meta) return false;
+    return meta.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(meta.config_permission ?? 0);
+}
+
+const displayNetworkName = (meta?: Api.NetworkMeta, defaultName: string = ''): string => {
+    if (isProtectedMeta(meta)) {
+        return '🔒 订阅网络 (已受保护)';
+    }
+    return meta?.network_name ?? defaultName;
+}
+
+const displayUuid = (uuid: string, meta?: Api.NetworkMeta): string => {
+    if (isProtectedMeta(meta)) {
+        return '****' + uuid.slice(-6);
+    }
+    return uuid;
+}
+
 const instanceList = ref<Array<{ uuid: string; meta?: Api.NetworkMeta }>>([]);
 const updateInstanceList = () => {
     let insts = new Set<string>();
@@ -536,7 +555,7 @@ onUnmounted(() => {
                                         <span class="truncate block">
                                             &nbsp;
                                             <span v-if="slotProps.value.meta">
-                                                {{ (slotProps.value.meta.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.value.meta.config_permission ?? 0)) ? '🔒 订阅网络 (已受保护)' : slotProps.value.meta.network_name }} ({{ (slotProps.value.meta.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.value.meta.config_permission ?? 0)) ? '****' + slotProps.value.uuid.slice(-6) : slotProps.value.uuid }})
+                                                {{ displayNetworkName(slotProps.value.meta, slotProps.value.uuid) }} ({{ displayUuid(slotProps.value.uuid, slotProps.value.meta) }})
                                             </span>
                                             <span v-else>
                                                 {{ slotProps.value.uuid }}
@@ -556,14 +575,14 @@ onUnmounted(() => {
                                     <div class="flex items-center min-w-0">
                                         <div class="mr-4 min-w-0 flex-1">
                                             <span class="truncate block">{{ t('network_name') }}: {{
-                                                (slotProps.option.meta?.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.option.meta?.config_permission ?? 0)) ? '🔒 订阅网络 (已受保护)' : (slotProps.option.meta?.network_name ?? slotProps.option.uuid) }}</span>
+                                                displayNetworkName(slotProps.option.meta, slotProps.option.uuid) }}</span>
                                         </div>
                                         <Tag class="my-auto leading-3 shrink-0"
                                             :severity="isRunning(slotProps.option.uuid) ? 'success' : 'info'"
                                             :value="t(isRunning(slotProps.option.uuid) ? 'network_running' : 'network_stopped')" />
                                     </div>
                                     <div class="max-w-full overflow-hidden text-ellipsis text-gray-500">
-                                        {{ (slotProps.option.meta?.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(slotProps.option.meta?.config_permission ?? 0)) ? '****' + slotProps.option.uuid.slice(-6) : slotProps.option.uuid }}
+                                        {{ displayUuid(slotProps.option.uuid, slotProps.option.meta) }}
                                     </div>
                                 </div>
                             </template>

@@ -36,6 +36,7 @@ export type NetworkConfig = Omit<
   mtu: number | null
   instance_recv_bps_limit: number | string | null
   networking_method: NetworkingMethod | string
+  config_server_url?: string
 }
 
 export type NormalizedAclV1 = AclV1 & {
