@@ -749,11 +749,6 @@ mod manager {
             &self.inst_id
         }
         fn get_network_config(&self) -> Result<NetworkConfig, anyhow::Error> {
-            if self.source == PersistedConfigSource::Web {
-                return Err(anyhow::anyhow!(
-                    "configuration internal details are protected by subscription server"
-                ));
-            }
             Ok(self.config.clone())
         }
         fn get_network_config_source(&self) -> ConfigSource {

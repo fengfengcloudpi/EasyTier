@@ -260,6 +260,31 @@ where
             }
         }
 
+        // Cross-reference with storage to fix source for Web-sourced configs.
+        // The running instance's TOML config may not carry the [config_source] section,
+        // causing the RPC meta to always report source=User for subscription-managed networks.
+        for (inst_id, meta) in metas.iter_mut() {
+            if let Ok(Some(stored_cfg)) = self
+                .get_storage()
+                .get_network_config(identify.clone(), &inst_id.to_string())
+                .await
+            {
+                let stored_source = stored_cfg.get_runtime_network_config_source();
+                if stored_source == ConfigSource::Web
+                    && config_source_from_rpc(meta.source) != Some(ConfigSource::Web)
+                {
+                    meta.source = config_source_to_rpc(ConfigSource::Web);
+                    let permission = ConfigFilePermission::default()
+                        .with_flag(ConfigFilePermission::READ_ONLY)
+                        .with_flag(ConfigFilePermission::NO_DELETE)
+                        .with_flag(ConfigFilePermission::NO_VIEW);
+                    meta.config_permission = permission.into();
+                    meta.network_name = "订阅网络".to_string();
+                    meta.instance_name = "订阅组网节点".to_string();
+                }
+            }
+        }
+
         for instance_id in inst_ids {
             if metas.contains_key(&instance_id) {
                 continue;
@@ -355,15 +380,23 @@ where
                 .await
             && let Some(config) = resp.config
         {
-            let source = if let Some(source) = config_source_from_rpc(resp.source) {
-                source
-            } else {
-                self.get_storage()
-                    .get_network_config(identify.clone(), &inst_id.to_string())
-                    .await
-                    .map_err(RemoteClientError::PersistentError)?
-                    .map(|cfg| cfg.get_runtime_network_config_source())
-                    .unwrap_or(ConfigSource::User)
+            let rpc_source = config_source_from_rpc(resp.source);
+
+            // Cross-reference with storage: the running instance's TOML config may
+            // not carry the [config_source] section, causing the RPC to always
+            // report source=User for subscription-managed networks.
+            // The storage layer is authoritative for the source.
+            let storage_source = self
+                .get_storage()
+                .get_network_config(identify.clone(), &inst_id.to_string())
+                .await
+                .ok()
+                .flatten()
+                .map(|cfg| cfg.get_runtime_network_config_source());
+
+            let source = match storage_source {
+                Some(ConfigSource::Web) => ConfigSource::Web,
+                _ => rpc_source.unwrap_or(ConfigSource::User),
             };
             return Ok((config, source));
         }
@@ -381,11 +414,6 @@ where
             )))?;
 
         let source = db_row.get_runtime_network_config_source();
-        if source == ConfigSource::Web {
-            return Err(RemoteClientError::Other(
-                "configuration internal details are protected by subscription server".to_string(),
-            ));
-        }
 
         Ok((
             db_row
