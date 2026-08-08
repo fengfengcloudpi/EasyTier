@@ -707,7 +707,7 @@ where
             || source == ConfigSource::Web
         {
             return Err(
-                anyhow::anyhow!("configuration internal details for instance {instance_id} are protected by subscription server").into(),
+                anyhow::anyhow!("cloud-managed network configuration is not editable for instance {instance_id}").into(),
             );
         }
         Ok(GetNetworkInstanceConfigResponse {

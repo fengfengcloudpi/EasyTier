@@ -348,6 +348,10 @@ web:
     no_network_selected: 未选择网络
     select_existing_network_or_create_new: 选择现有网络实例或创建新网络以管理网络设置
     disable_network: 禁用网络
+    stop_network: 停止网络
+    cloud_network: 云端网络
+    cloud_network_desc: 此网络由云端统一管理，运行状态可见，配置参数已隐藏。
+    cloud_network_info: 此网络由云端统一管理，配置参数已隐藏
 
   network:
     title: 网络

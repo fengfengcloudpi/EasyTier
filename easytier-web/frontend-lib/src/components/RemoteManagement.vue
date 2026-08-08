@@ -75,8 +75,11 @@ const currentNetworkControl = {
         return Api.ConfigFilePermission.isDeletable(currentNetworkMeta.value?.config_permission ?? 0);
     }),
     viewable: computed(() => {
-        const isWeb = currentNetworkMeta.value?.source === Api.ConfigSource.Web;
-        return Api.ConfigFilePermission.isViewable(currentNetworkMeta.value?.config_permission ?? 0) && !isWeb;
+        // 所有人都可以查看运行时状态
+        return true;
+    }),
+    isWeb: computed(() => {
+        return currentNetworkMeta.value?.source === Api.ConfigSource.Web;
     })
 }
 
@@ -89,12 +92,12 @@ watch(currentNetworkControl.viewable, (viewable) => {
 
 const isProtectedMeta = (meta?: Api.NetworkMeta): boolean => {
     if (!meta) return false;
-    return meta.source === Api.ConfigSource.Web || !Api.ConfigFilePermission.isViewable(meta.config_permission ?? 0);
+    return meta.source === Api.ConfigSource.Web;
 }
 
 const displayNetworkName = (meta?: Api.NetworkMeta, defaultName: string = ''): string => {
     if (isProtectedMeta(meta)) {
-        return '🔒 订阅网络 (已受保护)';
+        return '云端网络';
     }
     return meta?.network_name ?? defaultName;
 }
@@ -319,8 +322,10 @@ const editNetwork = async () => {
         return;
     }
 
-    if (!currentNetworkControl.viewable.value || currentNetworkMeta.value?.source === Api.ConfigSource.Web) {
-        toast.add({ severity: 'warn', summary: t('web.common.warning') || 'Notice', detail: '订阅服务器配置已受保护，隐藏内部连接参数', life: 3000 });
+    if (!currentNetworkControl.editable.value) {
+        if (currentNetworkControl.isWeb.value) {
+            toast.add({ severity: 'info', summary: t('web.device_management.cloud_network'), detail: t('web.device_management.cloud_network_info'), life: 3000 });
+        }
         isEditingNetwork.value = false;
         currentNetworkConfig.value = undefined;
         return;
@@ -328,12 +333,6 @@ const editNetwork = async () => {
 
     try {
         let ret = await props.api.get_network_config(instanceId.value!);
-        if (ret.config_server_url) {
-            toast.add({ severity: 'warn', summary: t('web.common.warning') || 'Notice', detail: '订阅服务器配置已受保护，隐藏内部连接参数', life: 3000 });
-            isEditingNetwork.value = false;
-            currentNetworkConfig.value = undefined;
-            return;
-        }
         console.debug("editNetwork", ret);
         currentNetworkConfig.value = ret;
         isEditingNetwork.value = true;
@@ -622,21 +621,21 @@ onUnmounted(() => {
 
         <!-- Main Content Area -->
         <div class="network-content bg-surface-0 p-4 rounded-lg shadow-sm">
-            <!-- Subscription Protected Config Notice -->
-            <div v-if="selectedInstanceId && (!currentNetworkControl.viewable.value || currentNetworkConfig?.config_server_url)" class="subscription-protected-container p-6 text-center border rounded-lg bg-surface-50 dark:bg-surface-800">
-                <i class="pi pi-lock text-5xl text-primary mb-3"></i>
-                <h3 class="text-xl font-bold mb-2">订阅服务器配置（已受保护）</h3>
+            <!-- Web/Sourced Network - Disabled: Show simple management -->
+            <div v-if="selectedInstanceId && networkIsDisabled && currentNetworkControl.isWeb.value" class="network-management-container p-6 text-center border rounded-lg bg-surface-50 dark:bg-surface-800">
+                <i class="pi pi-cloud text-5xl text-primary mb-3"></i>
+                <h3 class="text-xl font-medium mb-2">{{ t('web.device_management.cloud_network') }}</h3>
                 <p class="text-secondary text-base mb-6 max-w-lg mx-auto">
-                    此节点的组网配置由订阅服务器统一管理，隐去了内部敏感连接参数。本地无法查看或修改配置细节。
+                    {{ t('web.device_management.cloud_network_desc') }}
                 </p>
                 <div class="flex justify-center gap-3">
-                    <Button v-if="networkIsDisabled" @click="startNetwork" icon="pi pi-play" label="启用网络" severity="success" />
-                    <Button v-else @click="stopNetwork" icon="pi pi-power-off" label="禁用网络" severity="danger" />
+                    <Button @click="startNetwork" icon="pi pi-play"
+                        :label="t('web.device_management.start')" severity="success" />
                 </div>
             </div>
 
-            <!-- Network Creation Form -->
-            <div v-else-if="(isEditingNetwork || networkIsDisabled) && currentNetworkControl.viewable.value && !currentNetworkConfig?.config_server_url" class="network-creation-container">
+            <!-- Regular Network - Creation/Editing Form -->
+            <div v-else-if="(isEditingNetwork || networkIsDisabled) && currentNetworkControl.viewable.value" class="network-creation-container">
                 <div class="network-creation-header flex items-center gap-2 mb-3">
                     <i class="pi pi-plus-circle text-primary text-xl"></i>
                     <h2 class="text-xl font-medium">{{ t('web.device_management.edit_network') }}</h2>
@@ -658,7 +657,7 @@ onUnmounted(() => {
                     @run-network="saveAndRunNewNetwork"></Config>
             </div>
 
-            <!-- Network Status (for running networks) -->
+            <!-- Network Status (for running networks, both local and web) -->
             <div v-else-if="needShowNetworkStatus" class="network-status-container">
                 <div class="network-status-header flex items-center gap-2 mb-3">
                     <i class="pi pi-chart-line text-primary text-xl"></i>
@@ -674,8 +673,11 @@ onUnmounted(() => {
                 </Message>
 
                 <div class="text-center mt-4">
-                    <Button @click="stopNetwork" :disabled="!currentNetworkControl.deletable.value"
+                    <Button v-if="!currentNetworkControl.isWeb.value" @click="stopNetwork" :disabled="!currentNetworkControl.deletable.value"
                         :label="t('web.device_management.disable_network')" severity="danger" icon="pi pi-power-off"
+                        iconPos="left" />
+                    <Button v-else @click="stopNetwork" :disabled="!currentNetworkControl.deletable.value"
+                        :label="t('web.device_management.stop_network')" severity="warning" icon="pi pi-stop"
                         iconPos="left" />
                 </div>
             </div>

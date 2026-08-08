@@ -278,7 +278,7 @@ async fn get_config(app: AppHandle, instance_id: String) -> Result<NetworkConfig
         .await
         .map_err(|e| e.to_string())?;
     if source == ConfigSource::Web {
-        return Err("configuration internal details are protected by subscription server".to_string());
+        return Err("cloud-managed network configuration is not editable".to_string());
     }
     Ok(cfg)
 }

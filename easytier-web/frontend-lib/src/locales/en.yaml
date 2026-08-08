@@ -348,6 +348,10 @@ web:
     no_network_selected: No Network Selected
     select_existing_network_or_create_new: Select an existing network instance or create a new one to manage network settings
     disable_network: Disable Network
+    stop_network: Stop Network
+    cloud_network: Cloud Network
+    cloud_network_desc: This network is managed by the cloud. Status is visible, configuration details are hidden.
+    cloud_network_info: This network is managed by the cloud. Configuration details are hidden
 
   network:
     title: Network

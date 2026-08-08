@@ -306,7 +306,7 @@ const txRate = ref('0')
 const rxRate = ref('0')
 
 // 控制节点详细信息chips的显示/隐藏
-const showNodeDetails = ref(false)
+const showNodeDetails = ref(true)
 
 onMounted(() => {
   rateIntervalId = window.setInterval(() => {
